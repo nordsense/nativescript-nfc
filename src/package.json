@@ -1,6 +1,6 @@
 {
-  "name": "nativescript-nfc",
-  "version": "4.1.0",
+  "name": "@nordsense/nativescript-nfc",
+  "version": "4.2.0",
   "description": "NFC plugin for your NativeScript app",
   "main": "nfc",
   "typings": "index.d.ts",
@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/EddyVerbruggen/nativescript-nfc.git"
+    "url": "git+https://github.com/nordsense/nativescript-nfc.git"
   },
   "keywords": [
     "ecosystem:NativeScript",
