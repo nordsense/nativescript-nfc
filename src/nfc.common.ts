@@ -122,15 +122,20 @@ export class Nfc implements NfcApi {
     return undefined;
   }
 
-  setOnNdefDiscoveredListener(callback: (data: NfcNdefData) => void, options?: NdefListenerOptions): Promise<any> {
+  setOnNdefDiscoveredListener(
+    callback: (data: NfcNdefData) => void,
+    options?: NdefListenerOptions
+  ): Promise<any> {
     return undefined;
   }
 
-  setOnTagDiscoveredListener(callback: (data: NfcTagData) => void): Promise<any> {
+  setOnTagDiscoveredListener(
+    callback: (data: NfcTagData) => void
+  ): Promise<any> {
     return undefined;
   }
 
-  writeTag(arg: WriteTagOptions): Promise<any> {
+  writeTag(arg: WriteTagOptions, callback?: (data: any) => void): Promise<any> {
     return undefined;
   }
 }
