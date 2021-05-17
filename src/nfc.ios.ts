@@ -351,16 +351,6 @@ class NFCNDEFReaderSessionWriteDelegate
         session.alertMessage = "error";
       }
     });
-    // TODO either Text or URI
-    // const payload: NFCNDEFPayload = NFCNDEFPayload.wellKnownTypeTextPayloadWithStringLocale("EddyIOS", NSLocale.currentLocale);
-    // console.log(">> payload: " + payload);
-    // const ndefMessage: NFCNDEFMessage = NFCNDEFMessage.alloc().initWithNDEFRecords([payload]);
-    // console.log(">> ndefMessage: " + ndefMessage);
-    // if (nfcNdefTag.writeNDEFCompletionHandler) {
-    //   nfcNdefTag.writeNDEFCompletionHandler(ndefMessage, (error: NSError) => {
-    //     console.log(">> writeNDEFCompletionHandler, error: " + error);
-    //   });
-    // }
   }
 
   // Called when the reader session becomes invalid due to the specified error

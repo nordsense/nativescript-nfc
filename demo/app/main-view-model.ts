@@ -81,11 +81,13 @@ export class HelloWorldModel extends observable.Observable {
       textRecords: [
         {
           id: [1],
-          text: "Hello!"
+          text: "Hello!!!!!"
         }
       ]
+    }, (data: any) => {
+      this.set("lastNdefDiscovered", "Write: " + data);
     }).then(() => {
-      this.set("lastNdefDiscovered", "Wrote text 'Hello!'");
+      this.set("lastNdefDiscovered", "Listening to write...");
     }, (err) => {
       console.log(err);
     });
