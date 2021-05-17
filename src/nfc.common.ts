@@ -91,16 +91,21 @@ export interface OnTagDiscoveredOptions {
 export interface NfcApi {
   available(): Promise<boolean>;
   enabled(): Promise<boolean>;
-  writeTag(arg: WriteTagOptions): Promise<any>;
+  writeTag(arg: WriteTagOptions, callback?: (data: any) => void): Promise<any>;
   eraseTag(): Promise<any>;
   /**
    * Set to null to remove the listener.
    */
-  setOnTagDiscoveredListener(callback: (data: NfcTagData) => void): Promise<any>;
+  setOnTagDiscoveredListener(
+    callback: (data: NfcTagData) => void
+  ): Promise<any>;
   /**
    * Set to null to remove the listener.
    */
-  setOnNdefDiscoveredListener(callback: (data: NfcNdefData) => void, options?: NdefListenerOptions): Promise<any>;
+  setOnNdefDiscoveredListener(
+    callback: (data: NfcNdefData) => void,
+    options?: NdefListenerOptions
+  ): Promise<any>;
 }
 
 // this was done to generate a nice API for our users

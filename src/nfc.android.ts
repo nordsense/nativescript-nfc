@@ -371,7 +371,7 @@ export class Nfc implements NfcApi {
     });
   }
 
-  public writeTag(arg: WriteTagOptions): Promise<any> {
+  public writeTag(arg: WriteTagOptions, callback?: (data: any) => void): Promise<any> {
     return new Promise((resolve, reject) => {
       try {
         if (!arg) {
