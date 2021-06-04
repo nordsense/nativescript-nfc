@@ -1,6 +1,6 @@
 import * as observable from "tns-core-modules/data/observable";
 import { alert } from "tns-core-modules/ui/dialogs";
-import { Nfc, NfcTagData, NfcNdefData } from "nativescript-nfc";
+import { Nfc, NfcTagData, NfcNdefData } from "@nordsense/nativescript-nfc";
 
 export class HelloWorldModel extends observable.Observable {
   public lastNdefDiscovered: string = "Press a button...";
