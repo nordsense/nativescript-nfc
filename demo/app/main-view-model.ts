@@ -56,6 +56,7 @@ export class HelloWorldModel extends observable.Observable {
         // data.message is an array of records, so:
         data.message.forEach(record => {
           console.log("Read record: " + JSON.stringify(record));
+          alert("Read record: " + JSON.stringify(record));
           tagMessages.push(record.payloadAsString);
         });
         this.set("lastNdefDiscovered", "Read: " + tagMessages.join(", "));
@@ -76,21 +77,20 @@ export class HelloWorldModel extends observable.Observable {
     });
   }
 
-  public doWriteText() {
-    this.nfc.writeTag({
-      textRecords: [
-        {
-          id: [1],
-          text: "Hello!!!!!"
-        }
-      ]
-    }, (data: any) => {
-      this.set("lastNdefDiscovered", "Write: " + data);
-    }).then(() => {
-      this.set("lastNdefDiscovered", "Listening to write...");
-    }, (err) => {
-      console.log(err);
-    });
+  public async doWriteText() {
+    try {
+      const data = await this.nfc.writeTag({
+        textRecords: [
+          {
+            id: [1],
+            text: "Hello!!!!!"
+          }
+        ]
+      });
+      alert(JSON.stringify(data));
+    } catch (e) {
+      alert(e);
+    }
   }
 
   public doWriteUri() {
