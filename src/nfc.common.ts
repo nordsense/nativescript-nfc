@@ -11,6 +11,7 @@ export interface NdefListenerOptions {
    * By default no hint is shown.
    */
   scanHint?: string;
+  writeHint?: string;
 }
 
 export interface TextRecord {
@@ -91,7 +92,7 @@ export interface OnTagDiscoveredOptions {
 export interface NfcApi {
   available(): Promise<boolean>;
   enabled(): Promise<boolean>;
-  writeTag(arg: WriteTagOptions, callback?: (data: any) => void): Promise<any>;
+  writeTag(arg: WriteTagOptions): Promise<NfcNdefData>;
   eraseTag(): Promise<any>;
   /**
    * Set to null to remove the listener.
@@ -135,7 +136,7 @@ export class Nfc implements NfcApi {
     return undefined;
   }
 
-  writeTag(arg: WriteTagOptions, callback?: (data: any) => void): Promise<any> {
+  writeTag(arg: WriteTagOptions): Promise<NfcNdefData> {
     return undefined;
   }
 }

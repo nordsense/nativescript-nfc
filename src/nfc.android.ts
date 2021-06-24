@@ -371,7 +371,7 @@ export class Nfc implements NfcApi {
     });
   }
 
-  public writeTag(arg: WriteTagOptions, callback?: (data: any) => void): Promise<any> {
+  public writeTag(arg: WriteTagOptions): Promise<NfcNdefData> {
     return new Promise((resolve, reject) => {
       try {
         if (!arg) {
@@ -399,7 +399,8 @@ export class Nfc implements NfcApi {
 
         let errorMessage = this.writeNdefMessage(ndefMessage, tag);
         if (errorMessage === null) {
-          resolve();
+          const records = nfcIntentHandler.messageToJSON(ndefMessage);
+          resolve({message: records});
         } else {
           reject(errorMessage);
         }

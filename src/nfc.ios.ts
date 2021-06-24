@@ -6,6 +6,8 @@ export interface NfcSessionInvalidator {
 
 export class Nfc implements NfcApi, NfcSessionInvalidator {
   private session: NFCNDEFReaderSession;
+  private delegate: NFCNDEFReaderSessionDelegateImpl;
+  private writeDelegate: NFCNDEFReaderSessionWriteDelegate;
   public message: NFCNDEFMessage;
 
   private static _available(): boolean {
@@ -71,12 +73,12 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
             Promise.resolve().then(() => callback(data));
           }
         };
-        const delegate = this.createNFCNDEFReaderSessionDelegate(
+        this.delegate = this.createNFCNDEFReaderSessionDelegate(
           options,
           delegateCallback
         );
 
-        this.beginNFCNDEFReaderSession(delegate, options);
+        this.beginNFCNDEFReaderSession(this.delegate, options);
 
         resolve();
       } catch (e) {
@@ -98,10 +100,7 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
     });
   }
 
-  public writeTag(
-    arg: WriteTagOptions,
-    callback?: (data: any) => void
-  ): Promise<void> {
+  public writeTag(arg: WriteTagOptions): Promise<NfcNdefData> {
     return new Promise((resolve, reject) => {
       if (!Nfc._available()) {
         reject();
@@ -113,21 +112,23 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
         const options = {
           stopAfterFirstRead: false,
           scanHint: "Hold near writable NFC tag to write.",
+          writeHint: "Command sent!",
         };
         const delegateCallback = (data) => {
-          if (callback) {
-            // execute on the main thread with this trick, so UI updates are not broken
-            Promise.resolve().then(() => callback(data));
-          }
+          // execute on the main thread with this trick, so UI updates are not broken
+          Promise.resolve().then(() => resolve(data));
         };
-        const delegate = this.createNFCNDEFReaderSessionWriteDelegate(
+        const delegateErrorCallback = (error) => {
+          // execute on the main thread with this trick, so UI updates are not broken
+          Promise.resolve().then(() => reject(error));
+        };
+        this.writeDelegate = this.createNFCNDEFReaderSessionWriteDelegate(
           options,
-          delegateCallback
+          delegateCallback,
+          delegateErrorCallback
         );
 
-        this.beginNFCNDEFReaderSession(delegate, options);
-
-        resolve();
+        this.beginNFCNDEFReaderSession(this.writeDelegate, options);
       } catch (e) {
         reject(e);
       }
@@ -155,12 +156,14 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
 
   private createNFCNDEFReaderSessionWriteDelegate(
     options?: NdefListenerOptions,
-    callback?: (data: any) => void
+    callback?: (data: any) => void,
+    errorCallback?: (data: any) => void
   ) {
     const delegate =
       NFCNDEFReaderSessionWriteDelegate.createWithOwnerResultCallbackAndOptions(
         new WeakRef(this),
         callback,
+        errorCallback,
         options
       );
     return delegate;
@@ -249,11 +252,13 @@ class NFCNDEFReaderSessionDelegateImpl
 
 class NFCNDEFReaderSessionWriteDelegate
   extends NSObject
-  implements NFCNDEFReaderSessionDelegate {
+  implements NFCNDEFReaderSessionDelegate
+{
   public static ObjCProtocols = [];
 
   private _owner: WeakRef<Nfc>;
   private resultCallback: (message: any) => void;
+  private errorCallback: (error: any) => void;
   private options?: NdefListenerOptions;
 
   public static new(): NFCNDEFReaderSessionWriteDelegate {
@@ -261,13 +266,14 @@ class NFCNDEFReaderSessionWriteDelegate
       NFCNDEFReaderSessionWriteDelegate.ObjCProtocols.push(
         NFCNDEFReaderSessionDelegate
       );
-    } catch (ignore) { }
+    } catch (ignore) {}
     return <NFCNDEFReaderSessionWriteDelegate>super.new();
   }
 
   public static createWithOwnerResultCallbackAndOptions(
     owner: WeakRef<Nfc>,
     callback: (message: any) => void,
+    errorCallback: (error: any) => void,
     options?: NdefListenerOptions
   ): NFCNDEFReaderSessionWriteDelegate {
     let delegate = <NFCNDEFReaderSessionWriteDelegate>(
@@ -276,6 +282,7 @@ class NFCNDEFReaderSessionWriteDelegate
     delegate._owner = owner;
     delegate.options = options;
     delegate.resultCallback = callback;
+    delegate.errorCallback = errorCallback;
     return delegate;
   }
 
@@ -287,8 +294,7 @@ class NFCNDEFReaderSessionWriteDelegate
   readerSessionDidDetectNDEFs(
     session: NFCNDEFReaderSession,
     messages: NSArray<NFCNDEFMessage>
-  ): void {
-  }
+  ): void {}
 
   readerSessionDidDetectTags(
     session: NFCNDEFReaderSession,
@@ -301,7 +307,7 @@ class NFCNDEFReaderSessionWriteDelegate
       if (error) {
         console.log(error);
         session.invalidateSessionWithErrorMessage("Error connecting to tag.");
-        this.resultCallback(error);
+        this.errorCallback(error);
         return;
       }
 
@@ -331,6 +337,7 @@ class NFCNDEFReaderSessionWriteDelegate
                   if (error) {
                     console.log(error);
                     session.invalidateSessionWithErrorMessage("Write failed.");
+                    this.errorCallback(error);
                   } else {
                     if (
                       ndefMessage.records[0].typeNameFormat ==
@@ -338,7 +345,10 @@ class NFCNDEFReaderSessionWriteDelegate
                     ) {
                       session.alertMessage = "Erased data from NFC tag.";
                     } else {
-                      session.alertMessage = "Wrote data to NFC tag.";
+                      if (this.options.writeHint) {
+                        session.alertMessage = this.options.writeHint;
+                      }
+                      this.resultCallback(NfcHelper.ndefToJson(ndefMessage));
                     }
                     session.invalidateSession();
                   }
