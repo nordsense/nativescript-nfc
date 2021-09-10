@@ -1,13 +1,13 @@
 {
-  "name": "nativescript-nfc",
-  "version": "4.1.0",
+  "name": "@nordsense/nativescript-nfc",
+  "version": "4.2.2",
   "description": "NFC plugin for your NativeScript app",
   "main": "nfc",
   "typings": "index.d.ts",
   "nativescript": {
     "platforms": {
       "android": "5.4.0",
-      "ios": "4.0.0"
+      "ios": "6.5.4"
     }
   },
   "scripts": {
@@ -28,7 +28,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/EddyVerbruggen/nativescript-nfc.git"
+    "url": "git+https://github.com/nordsense/nativescript-nfc.git"
   },
   "keywords": [
     "ecosystem:NativeScript",
@@ -50,11 +50,11 @@
   "readmeFilename": "README.md",
   "devDependencies": {
     "nativescript-dev-typescript": "~0.10.0",
-    "tns-core-modules": "~6.2.0",
-    "tns-platform-declarations": "~6.2.0",
-    "typescript": "~3.4.5",
     "rimraf": "^2.5.0",
-    "tslint": "^5.0.0"
+    "tns-core-modules": "^6.5.27",
+    "tns-platform-declarations": "^6.5.15",
+    "tslint": "^5.0.0",
+    "typescript": "~3.4.5"
   },
   "bootstrapper": "nativescript-plugin-seed"
 }

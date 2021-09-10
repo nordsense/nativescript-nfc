@@ -1,6 +1,6 @@
 import * as observable from "tns-core-modules/data/observable";
 import { alert } from "tns-core-modules/ui/dialogs";
-import { Nfc, NfcTagData, NfcNdefData } from "nativescript-nfc";
+import { Nfc, NfcTagData, NfcNdefData } from "@nordsense/nativescript-nfc";
 
 export class HelloWorldModel extends observable.Observable {
   public lastNdefDiscovered: string = "Press a button...";
@@ -56,6 +56,7 @@ export class HelloWorldModel extends observable.Observable {
         // data.message is an array of records, so:
         data.message.forEach(record => {
           console.log("Read record: " + JSON.stringify(record));
+          alert("Read record: " + JSON.stringify(record));
           tagMessages.push(record.payloadAsString);
         });
         this.set("lastNdefDiscovered", "Read: " + tagMessages.join(", "));
@@ -76,19 +77,20 @@ export class HelloWorldModel extends observable.Observable {
     });
   }
 
-  public doWriteText() {
-    this.nfc.writeTag({
-      textRecords: [
-        {
-          id: [1],
-          text: "Hello!"
-        }
-      ]
-    }).then(() => {
-      this.set("lastNdefDiscovered", "Wrote text 'Hello!'");
-    }, (err) => {
-      console.log(err);
-    });
+  public async doWriteText() {
+    try {
+      const data = await this.nfc.writeTag({
+        textRecords: [
+          {
+            id: [1],
+            text: "Hello!!!!!"
+          }
+        ]
+      });
+      alert(JSON.stringify(data));
+    } catch (e) {
+      alert(e);
+    }
   }
 
   public doWriteUri() {
