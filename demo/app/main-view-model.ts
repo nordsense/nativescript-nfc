@@ -1,5 +1,5 @@
 import { Dialogs, Observable } from "@nativescript/core";
-import { Nfc, NfcNdefData, NfcTagData } from "nativescript-nfc";
+import { Nfc, NfcNdefData, NfcTagData } from "@nordsense/nativescript-nfc";
 
 export class HelloWorldModel extends Observable {
   public lastNdefDiscovered: string = "Press a button...";
