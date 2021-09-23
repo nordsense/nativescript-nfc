@@ -1,4 +1,12 @@
-import { NdefListenerOptions, NfcApi, NfcNdefData, NfcNdefRecord, NfcTagData, NfcUriProtocols, WriteTagOptions } from "./nfc.common";
+import {
+  NdefListenerOptions,
+  NfcApi,
+  NfcNdefData,
+  NfcNdefRecord,
+  NfcTagData,
+  NfcUriProtocols,
+  WriteTagOptions
+} from "./nfc.common";
 
 export interface NfcSessionInvalidator {
   invalidateSession(): void;
@@ -466,14 +474,14 @@ class NfcHelper {
     }
 
     return {
-      message: this.messageToJSON(message),
+      message: NFCNDEFReaderSessionDelegateImpl.messageToJSON(message)
     };
   }
 
   public static messageToJSON(message: NFCNDEFMessage): Array<NfcNdefRecord> {
     const result = [];
     for (let i = 0; i < message.records.count; i++) {
-      result.push(this.recordToJSON(message.records.objectAtIndex(i)));
+      result.push(NFCNDEFReaderSessionDelegateImpl.recordToJSON(message.records.objectAtIndex(i)));
     }
     return result;
   }
@@ -482,8 +490,8 @@ class NfcHelper {
     let payloadAsHexArray = this.nsdataToHexArray(record.payload);
     let payloadAsString = this.nsdataToASCIIString(record.payload);
     let payloadAsStringWithPrefix = payloadAsString;
-    const recordType = this.nsdataToHexArray(record.type);
-    const decimalType = this.hexToDec(recordType[0]);
+    const recordType = NFCNDEFReaderSessionDelegateImpl.nsdataToHexArray(record.type);
+    const decimalType = NFCNDEFReaderSessionDelegateImpl.hexToDec(recordType[0]);
     if (decimalType === 84) {
       let languageCodeLength: number = +payloadAsHexArray[0];
       payloadAsString = payloadAsStringWithPrefix.substring(
@@ -500,9 +508,9 @@ class NfcHelper {
     return {
       tnf: record.typeNameFormat, // "typeNameFormat" (1 = well known) - see https://developer.apple.com/documentation/corenfc/nfctypenameformat?changes=latest_major&language=objc
       type: decimalType,
-      id: this.hexToDecArray(this.nsdataToHexArray(record.identifier)),
-      payload: this.hexToDecArray(payloadAsHexArray),
-      payloadAsHexString: this.nsdataToHexString(record.payload),
+      id: NFCNDEFReaderSessionDelegateImpl.hexToDecArray(NFCNDEFReaderSessionDelegateImpl.nsdataToHexArray(record.identifier)),
+      payload: NFCNDEFReaderSessionDelegateImpl.hexToDecArray(payloadAsHexArray),
+      payloadAsHexString: NFCNDEFReaderSessionDelegateImpl.nsdataToHexString(record.payload),
       payloadAsStringWithPrefix: payloadAsStringWithPrefix,
       payloadAsString: payloadAsString,
     };
@@ -547,12 +555,12 @@ class NfcHelper {
 
   private static nsdataToHexString(data): string {
     let b = interop.bufferFromData(data);
-    return this.buf2hexString(b);
+    return NFCNDEFReaderSessionDelegateImpl.buf2hexString(b);
   }
 
   private static nsdataToHexArray(data): Array<string> {
     let b = interop.bufferFromData(data);
-    return this.buf2hexArray(b);
+    return NFCNDEFReaderSessionDelegateImpl.buf2hexArray(b);
   }
 
   private static nsdataToASCIIString(data): string {

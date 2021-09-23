@@ -1,20 +1,15 @@
 {
-  "nativescript": {
-    "id": "com.nordsense.nativescript.plugindemo.nfc",
-    "tns-ios": {
-      "version": "6.5.4"
-    },
-    "tns-android": {
-      "version": "6.2.0"
-    }
-  },
   "dependencies": {
     "@nordsense/nativescript-nfc": "file:../src",
     "nativescript-theme-core": "~1.0.6",
     "nativescript-unit-test-runner": "0.7.0",
-    "tns-core-modules": "^6.5.27"
+    "@nativescript/core": "~7.0.11"
   },
   "devDependencies": {
+    "@nativescript/android": "7.0.0",
+    "@nativescript/ios": "7.0.6",
+    "@nativescript/types": "~7.0.4",
+    "@nativescript/webpack": "~3.0.7",
     "babel-traverse": "6.26.0",
     "babel-types": "6.26.0",
     "babylon": "6.18.0",
@@ -25,10 +20,7 @@
     "karma-nativescript-launcher": "^0.4.0",
     "karma-webpack": "3.0.5",
     "lazy": "1.0.11",
-    "nativescript-dev-webpack": "next",
-    "tns-android": "6.2.0",
-    "tns-ios": "6.5.4",
-    "tns-platform-declarations": "^6.5.15",
-    "typescript": "3.4.5"
-  }
+    "typescript": "3.9.7"
+  },
+  "main": "app.js"
 }
