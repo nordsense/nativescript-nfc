@@ -1,0 +1,13 @@
+{
+	"name": "migration",
+	"paths": [
+		"hooks",
+		"webpack.config.js",
+		"package.json",
+		"package-lock.json",
+		"karma.conf.js",
+		"webpack.config.js",
+		"package.json",
+		"karma.conf.js"
+	]
+}

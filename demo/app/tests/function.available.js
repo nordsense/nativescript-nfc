@@ -1,4 +1,4 @@
-var nfc = new (require("nativescript-nfc").Nfc)();
+var nfc = new (require("@nordsense/nativescript-nfc").Nfc)();
 
 describe("available", function() {
   it("exists", function() {
