@@ -1,3 +1,4 @@
+import { Utils } from "@nativescript/core";
 import {
   NdefListenerOptions,
   NfcApi,
@@ -77,8 +78,9 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
                 JSON.stringify(data)
             );
           } else {
-            // execute on the main thread with this trick, so UI updates are not broken
-            Promise.resolve().then(() => callback(data));
+            Utils.executeOnMainThread(() => {
+              return callback(data);
+            });
           }
         };
         this.delegate = this.createNFCNDEFReaderSessionDelegate(
@@ -123,12 +125,14 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
           writeHint: "Command sent!",
         };
         const delegateCallback = (data) => {
-          // execute on the main thread with this trick, so UI updates are not broken
-          Promise.resolve().then(() => resolve(data));
+          Utils.executeOnMainThread(() => {
+            return resolve(data);
+          });
         };
         const delegateErrorCallback = (error) => {
-          // execute on the main thread with this trick, so UI updates are not broken
-          Promise.resolve().then(() => reject(error));
+          Utils.executeOnMainThread(() => {
+            return reject(error);
+          });
         };
         this.writeDelegate = this.createNFCNDEFReaderSessionWriteDelegate(
           options,
@@ -198,6 +202,7 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
   }
 }
 
+@NativeClass()
 class NFCNDEFReaderSessionDelegateImpl
   extends NSObject
   implements NFCNDEFReaderSessionDelegate
@@ -258,6 +263,7 @@ class NFCNDEFReaderSessionDelegateImpl
   }
 }
 
+@NativeClass()
 class NFCNDEFReaderSessionWriteDelegate
   extends NSObject
   implements NFCNDEFReaderSessionDelegate
@@ -366,6 +372,7 @@ class NFCNDEFReaderSessionWriteDelegate
           }
         );
       } catch (e) {
+        console.log(e);
         session.alertMessage = "error";
       }
     });
