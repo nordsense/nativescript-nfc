@@ -1,5 +1,5 @@
 import {
-  NdefListenerOptions,
+  NDEFListenerOptions,
   NfcApi,
   NfcNdefData,
   NfcNdefRecord,
@@ -326,14 +326,14 @@ export class Nfc implements NfcApi {
     });
   }
 
-  public setOnTagDiscoveredListener(callback: (data: NfcTagData) => void): Promise<any> {
+  public setOnTagDiscoveredListener(callback: (data: NfcTagData) => void): Promise<void> {
     return new Promise((resolve, reject) => {
       onTagDiscoveredListener = callback;
       resolve();
     });
   }
 
-  public setOnNdefDiscoveredListener(callback: (data: NfcNdefData) => void, options?: NdefListenerOptions): Promise<any> {
+  public setOnNdefDiscoveredListener(callback: (data: NfcNdefData) => void, options?: NDEFListenerOptions): Promise<void> {
     return new Promise((resolve, reject) => {
       // TODO use options, some day
       onNdefDiscoveredListener = callback;
@@ -341,7 +341,7 @@ export class Nfc implements NfcApi {
     });
   }
 
-  public eraseTag(): Promise<any> {
+  public eraseTag(): Promise<void> {
     return new Promise((resolve, reject) => {
       const intent = application.android.foregroundActivity.getIntent() || nfcIntentHandler.savedIntent;
       if (!intent) {
