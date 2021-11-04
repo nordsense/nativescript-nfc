@@ -83,6 +83,9 @@ export interface UriRecord {
 export interface WriteTagOptions extends NFCNDEFReaderSessionOptions {
   textRecords?: Array<TextRecord>;
   uriRecords?: Array<UriRecord>;
+  writeGuardMessage?: string;
+  retryInterval?: number;
+
 }
 
 export interface NfcTagData {
@@ -131,7 +134,10 @@ export interface OnTagDiscoveredOptions {
 export interface NfcApi {
   available(): Promise<boolean>;
   enabled(): Promise<boolean>;
-  writeTag(options: WriteTagOptions): Promise<NfcNdefData>;
+  writeTag(
+    options: WriteTagOptions,
+    writeGuardCallback?: (data: NfcNdefData) => boolean
+  ): Promise<NfcNdefData>;
   eraseTag(): Promise<void>;
   /**
    * Set to null to remove the listener.
@@ -175,7 +181,18 @@ export class Nfc implements NfcApi {
     return undefined;
   }
 
-  writeTag(options: WriteTagOptions): Promise<NfcNdefData> {
+  writeTag(
+    options: WriteTagOptions,
+    writeGuardCallback?: (data: NfcNdefData) => boolean
+  ): Promise<NfcNdefData> {
     return undefined;
   }
 }
+
+export class WriteGuardError extends Error {
+  data: NfcNdefData;
+  constructor(message, data: NfcNdefData) {
+    super(message);
+    this.data = data;
+  }
+} 
