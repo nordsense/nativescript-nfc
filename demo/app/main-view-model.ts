@@ -63,7 +63,7 @@ export class HelloWorldModel extends observable.Observable {
       }
     }, {
       stopAfterFirstRead: true,
-      scanHint: "Scan a tag, baby!"
+      startMessage: "Scan a tag, baby!"
     })
         .then(() => this.set("lastNdefDiscovered", "Listening..."))
         .catch(err => alert(err));
@@ -83,9 +83,11 @@ export class HelloWorldModel extends observable.Observable {
         textRecords: [
           {
             id: [1],
-            text: "Hello!!!!!"
-          }
-        ]
+            text: "Hello!!!!!",
+          },
+        ],
+        startMessage: "Hold near writable NFC tag to write.",
+        endMessage: "Command sent!",
       });
       alert(JSON.stringify(data));
     } catch (e) {
