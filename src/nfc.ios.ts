@@ -1,3 +1,4 @@
+import * as utils from "tns-core-modules/utils/utils";
 import {
   NDEFListenerOptions,
   NfcApi,
@@ -8,7 +9,10 @@ import {
   WriteTagOptions,
   TextRecord,
   NFCNDEFReaderSessionOptions,
+  WriteGuardError,
 } from "./nfc.common";
+
+export { WriteGuardError };
 
 export interface NfcSessionInvalidator {
   invalidateSession(): void;
@@ -128,7 +132,9 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
         };
         const delegateErrorCallback = (error) => {
           // execute on the main thread with this trick, so UI updates are not broken
-          Promise.resolve().then(() => reject(error));
+          utils.executeOnMainThread(() => {
+            reject(error);
+          });
         };
         const delegateWriteGuardCallback = (data: NfcNdefData) => {
           if (!writeGuardCallback) {
@@ -322,6 +328,11 @@ class NFCNDEFReaderSessionDelegateWriteImpl
   ): void {
     const prototype = NFCNDEFTag.prototype;
     const tag = (<NSArray<NFCNDEFTag>>tags).firstObject;
+    console.log("Pooling");
+    //setTimeout(() => session.restartPolling(), 100);
+    utils.executeOnMainThread(() => setTimeout(() => session.restartPolling(), 1000));
+    //session.restartPolling();
+    return;
     session.connectToTagCompletionHandler(tag, (error: NSError) => {
       console.log("connectToTagCompletionHandler");
 
@@ -378,16 +389,18 @@ class NFCNDEFReaderSessionDelegateWriteImpl
                     if (!this.writeGuardCallback(data)) {
                       const errorMessage = this.options.writeGuardMessage || "";
                       session.invalidateSessionWithErrorMessage(errorMessage);
-                      this.errorCallback(errorMessage);
+                      this.errorCallback(
+                        new WriteGuardError(errorMessage, data)
+                      );
                       return;
                     }
-                      
+
                     // Start writing
                     const ndefMessage = this._owner.get().message;
                     prototype.writeNDEFCompletionHandler.call(
                       ndefTag,
                       ndefMessage,
-                      (error: NSError) => {
+                      async (error: NSError) => {
                         console.log("writeNDEFCompletionHandler");
                         if (error) {
                           console.log(error);
@@ -401,31 +414,36 @@ class NFCNDEFReaderSessionDelegateWriteImpl
                             ndefMessage.records[0].typeNameFormat ==
                             NFCTypeNameFormat.Empty
                           ) {
-                            session.alertMessage =
-                              "Erased data from NFC tag.";
+                            session.alertMessage = "Erased data from NFC tag.";
                           } else {
+                            console.log("Sleep");
+                            //setTimeout(() => console.log("2 sec passed"), 2000);
                             // Read back the data
-                            prototype.readNDEFWithCompletionHandler.call(
-                              ndefTag,
-                              (message: NFCNDEFMessage, error: NSError) => {
-                                console.log("readNDEFWithCompletionHandler");
-                                if (error) {
-                                  console.log(error);
-                                  session.invalidateSessionWithErrorMessage(
-                                    "Error reading NDEF message from tag."
-                                  );
-                                  this.errorCallback(error);
-                                  return;
-                                }
-                                const data = NfcHelper.ndefToJson(message);
-                                console.log("Message", JSON.stringify(data));
+                            // prototype.readNDEFWithCompletionHandler.call(
+                            //   ndefTag,
+                            //   (message: NFCNDEFMessage, error: NSError) => {
+                            //     console.log("readNDEFWithCompletionHandler");
+                            //     if (error) {
+                            //       console.log(error);
+                            //       session.invalidateSessionWithErrorMessage(
+                            //         "Error reading NDEF message from tag."
+                            //       );
+                            //       this.errorCallback(error);
+                            //       return;
+                            //     }
+                            //     const data = NfcHelper.ndefToJson(message);
+                            //     console.log(
+                            //       "Read back message",
+                            //       JSON.stringify(data)
+                            //     );
 
                                 if (this.options.endMessage) {
                                   session.alertMessage =
                                     this.options.endMessage;
                                 }
                                 this.resultCallback(data);
-                              });
+                            //   }
+                            // );
                           }
                           session.invalidateSession();
                           return;
