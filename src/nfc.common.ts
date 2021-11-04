@@ -193,6 +193,7 @@ export class WriteGuardError extends Error {
   data: NfcNdefData;
   constructor(message, data: NfcNdefData) {
     super(message);
+    this.name = "WriteGuardError";
     this.data = data;
   }
 } 
