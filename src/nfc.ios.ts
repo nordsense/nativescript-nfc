@@ -10,7 +10,7 @@ import {
   TextRecord,
   NFCNDEFReaderSessionOptions,
   WriteGuardBeforeCheckError,
-  WriteGuardAfterCheckError
+  WriteGuardAfterCheckError,
 } from "./nfc.common";
 
 export { WriteGuardBeforeCheckError, WriteGuardAfterCheckError };
