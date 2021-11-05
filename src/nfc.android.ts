@@ -5,10 +5,14 @@ import {
   NfcNdefRecord,
   NfcTagData,
   NfcUriProtocols,
+  WriteGuardBeforeCheckError,
+  WriteGuardAfterCheckError,
   WriteTagOptions
 } from "./nfc.common";
 import * as utils from "tns-core-modules/utils/utils";
 import * as application from "tns-core-modules/application";
+
+export { WriteGuardBeforeCheckError, WriteGuardAfterCheckError };
 
 declare let Array: any;
 
@@ -428,17 +432,18 @@ export class Nfc implements NfcApi {
 
         this.setOnNdefDiscoveredListener((data: NfcNdefData) => {
           this.setOnNdefDiscoveredListener(null).then(() => {
-            if (data.message) {
-              let tagMessages = [];
-              // data.message is an array of records, so:
-              data.message.forEach((record) => {
-                console.log(
-                  "Read record from write: " + JSON.stringify(record)
+            if (writeGuardBeforeCheckCallback) {
+              if (!writeGuardBeforeCheckCallback(data)) {
+                const errorMessage =
+                  options.writeGuardBeforeCheckErrorMessage || "";
+                reject(
+                  new WriteGuardBeforeCheckError(errorMessage, data)
                 );
-                tagMessages.push(record.payloadAsString);
-              });
-              resolve(undefined);
+                return;
+              }
             }
+            // Start writing
+            resolve(data);
           });
         });
 
