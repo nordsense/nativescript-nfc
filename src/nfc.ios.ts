@@ -10,9 +10,10 @@ import {
   TextRecord,
   NFCNDEFReaderSessionOptions,
   WriteGuardError,
+  ReadAfterWriteError
 } from "./nfc.common";
 
-export { WriteGuardError };
+export { WriteGuardError, ReadAfterWriteError };
 
 export interface NfcSessionInvalidator {
   invalidateSession(): void;
@@ -116,7 +117,8 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
 
   public writeTag(
     options: WriteTagOptions,
-    writeGuardCallback?: (data: NfcNdefData) => boolean
+    writeGuardCallback?: (data: NfcNdefData) => boolean,
+    readAfterWriteCheckCallback?: (data: NfcNdefData) => boolean
   ): Promise<NfcNdefData> {
     return new Promise((resolve, reject) => {
       if (!Nfc._available()) {
@@ -142,11 +144,18 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
           }
           return writeGuardCallback(data);
         };
+        const delegateReadAfterWriteCheckCallback = (data: NfcNdefData) => {
+          if (!readAfterWriteCheckCallback) {
+            return true;
+          }
+          return readAfterWriteCheckCallback(data);
+        };
         this.writeDelegate = this.createNFCNDEFReaderSessionDelegateWrite(
           options,
           delegateCallback,
           delegateErrorCallback,
-          delegateWriteGuardCallback
+          delegateWriteGuardCallback,
+          delegateReadAfterWriteCheckCallback
         );
 
         this.beginNFCNDEFReaderSession(this.writeDelegate, options);
@@ -179,7 +188,8 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
     options?: WriteTagOptions,
     callback?: (data: any) => void,
     errorCallback?: (data: any) => void,
-    writeGuardCallback?: (data: NfcNdefData) => boolean
+    writeGuardCallback?: (data: NfcNdefData) => boolean,
+    readAfterWriteCheckCallback?: (data: NfcNdefData) => boolean
   ) {
     const delegate =
       NFCNDEFReaderSessionDelegateWriteImpl.createWithOwnerResultCallbackAndOptions(
@@ -187,6 +197,7 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
         callback,
         errorCallback,
         writeGuardCallback,
+        readAfterWriteCheckCallback,
         options
       );
     return delegate;
@@ -283,8 +294,9 @@ class NFCNDEFReaderSessionDelegateWriteImpl
   private resultCallback: (message: any) => void;
   private errorCallback: (error: any) => void;
   private writeGuardCallback: (data: NfcNdefData) => boolean;
+  private readAfterWriteCheckCallback: (data: NfcNdefData) => boolean;
   private options?: WriteTagOptions;
-  private pooling: boolean;
+  private readAfterWriteCheck: boolean;
 
   public static new(): NFCNDEFReaderSessionDelegateWriteImpl {
     try {
@@ -300,6 +312,7 @@ class NFCNDEFReaderSessionDelegateWriteImpl
     callback: (message: any) => void,
     errorCallback: (error: any) => void,
     writeGuardCallback: (data: NfcNdefData) => boolean,
+    readAfterWriteCheckCallback: (data: NfcNdefData) => boolean,
     options?: WriteTagOptions
   ): NFCNDEFReaderSessionDelegateWriteImpl {
     let delegate = <NFCNDEFReaderSessionDelegateWriteImpl>(
@@ -310,7 +323,8 @@ class NFCNDEFReaderSessionDelegateWriteImpl
     delegate.resultCallback = callback;
     delegate.errorCallback = errorCallback;
     delegate.writeGuardCallback = writeGuardCallback;
-    delegate.pooling = false;
+    delegate.readAfterWriteCheckCallback = readAfterWriteCheckCallback;
+    delegate.readAfterWriteCheck = false;
     return delegate;
   }
 
@@ -330,16 +344,7 @@ class NFCNDEFReaderSessionDelegateWriteImpl
   ): void {
     const prototype = NFCNDEFTag.prototype;
     const tag = (<NSArray<NFCNDEFTag>>tags).firstObject;
-    console.log("Pooling", this.pooling);
 
-    //session.restartPolling();
-    // utils.executeOnMainThread(() =>
-    //   setTimeout(() => session.connectToTagCompletionHandler(tag, (error: NSError) => {
-    //     console.log("connectToTagCompletionHandler");
-    //     session.invalidateSession();
-    //   }), 1000)
-    // );
-    //return;
     session.connectToTagCompletionHandler(tag, (error: NSError) => {
       console.log("connectToTagCompletionHandler");
 
@@ -350,12 +355,7 @@ class NFCNDEFReaderSessionDelegateWriteImpl
         return;
       }
 
-      // const ndefTag: NFCNDEFTag = new interop.Reference<NFCNDEFTag>(
-      //   interop.types.id,
-      //   tag
-      // ).value;
-
-      if (this.pooling) {
+      if (this.readAfterWriteCheck) {
         // Read back the data
         prototype.readNDEFWithCompletionHandler.call(
           tag,
@@ -370,14 +370,22 @@ class NFCNDEFReaderSessionDelegateWriteImpl
               return;
             }
             const data = NfcHelper.ndefToJson(message);
-            console.log("Read back message", JSON.stringify(data));
+            console.log("Read After Write Message", JSON.stringify(data));
 
-            if (this.options.endMessage) {
-              session.alertMessage = this.options.endMessage;
+            if (this.readAfterWriteCheckCallback(data)) {
+              if (this.options.endMessage) {
+                session.alertMessage = this.options.endMessage;
+              }
+              this.resultCallback(data);
+              session.invalidateSession();
+              return;
+            } else {
+              const errorMessage = this.options.readAfterWriteErrorMessage || "";
+              session.invalidateSessionWithErrorMessage(errorMessage);
+              this.errorCallback(new ReadAfterWriteError(errorMessage, data));
+              return;
             }
-            this.resultCallback(data);
-            session.invalidateSession();
-            return;
+            
           }
         );
         return;
@@ -420,9 +428,9 @@ class NFCNDEFReaderSessionDelegateWriteImpl
                       return;
                     }
                     const data = NfcHelper.ndefToJson(message);
-                    console.log("Message", JSON.stringify(data));
+                    console.log("First Read Message", JSON.stringify(data));
                     if (!this.writeGuardCallback(data)) {
-                      const errorMessage = this.options.writeGuardMessage || "";
+                      const errorMessage = this.options.writeGuardErrorMessage || "";
                       session.invalidateSessionWithErrorMessage(errorMessage);
                       this.errorCallback(
                         new WriteGuardError(errorMessage, data)
@@ -430,49 +438,56 @@ class NFCNDEFReaderSessionDelegateWriteImpl
                       return;
                     }
 
-                    session.connectToTagCompletionHandler(tag, (error: NSError) => {
-                      console.log("connectToTagCompletionHandler");
-                      if (error) {
-                        console.log(error);
-                        session.invalidateSessionWithErrorMessage(
-                          "Unable to connect to tag."
-                        );
-                        this.errorCallback(error);
-                        return;
-                      }
-                      // Start writing
-                      const ndefMessage = this._owner.get().message;
-                      prototype.writeNDEFCompletionHandler.call(
-                        tag,
-                        ndefMessage,
-                        (error: NSError) => {
-                          console.log("writeNDEFCompletionHandler");
-                          if (error) {
-                            console.log(error);
-                            session.invalidateSessionWithErrorMessage(
-                              "Write NDEF message failed."
-                            );
-                            this.errorCallback(error);
-                          } else {
-                            // This is not fully implemented yet
-                            if (
-                              ndefMessage.records[0].typeNameFormat ==
-                              NFCTypeNameFormat.Empty
-                            ) {
-                              session.alertMessage = "Erased data from NFC tag.";
-                            } else {
-                              this.pooling = true;
-                              utils.executeOnMainThread(() =>
-                                setTimeout(() => session.restartPolling(), 1000)
+                    session.connectToTagCompletionHandler(
+                      tag,
+                      (error: NSError) => {
+                        console.log("connectToTagCompletionHandler");
+                        if (error) {
+                          console.log(error);
+                          session.invalidateSessionWithErrorMessage(
+                            "Unable to connect to tag."
+                          );
+                          this.errorCallback(error);
+                          return;
+                        }
+                        // Start writing
+                        const ndefMessage = this._owner.get().message;
+                        prototype.writeNDEFCompletionHandler.call(
+                          tag,
+                          ndefMessage,
+                          (error: NSError) => {
+                            console.log("writeNDEFCompletionHandler");
+                            if (error) {
+                              console.log(error);
+                              session.invalidateSessionWithErrorMessage(
+                                "Write NDEF message failed."
                               );
+                              this.errorCallback(error);
+                            } else {
+                              // This is not fully implemented yet
+                              if (
+                                ndefMessage.records[0].typeNameFormat ==
+                                NFCTypeNameFormat.Empty
+                              ) {
+                                session.alertMessage =
+                                  "Erased data from NFC tag.";
+                              } else {
+                                this.readAfterWriteCheck = true;
+                                utils.executeOnMainThread(() =>
+                                  setTimeout(
+                                    () => session.restartPolling(),
+                                    this.options.readAfterWriteDelay
+                                  )
+                                );
+                                return;
+                              }
+                              session.invalidateSession();
                               return;
                             }
-                            session.invalidateSession();
-                            return;
                           }
-                        }
-                      );
-                    });
+                        );
+                      }
+                    );
                   }
                 );
                 break;

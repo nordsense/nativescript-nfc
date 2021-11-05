@@ -49,6 +49,9 @@ export interface NFCNDEFReaderSessionOptions {
    */
   startMessage?: string;
   endMessage?: string;
+  writeGuardErrorMessage?: string;
+  readAfterWriteDelay?: number;
+  readAfterWriteErrorMessage?: string;
 }
 
 export interface NDEFListenerOptions extends NFCNDEFReaderSessionOptions {}
@@ -83,9 +86,6 @@ export interface UriRecord {
 export interface WriteTagOptions extends NFCNDEFReaderSessionOptions {
   textRecords?: Array<TextRecord>;
   uriRecords?: Array<UriRecord>;
-  writeGuardMessage?: string;
-  retryInterval?: number;
-
 }
 
 export interface NfcTagData {
@@ -136,7 +136,8 @@ export interface NfcApi {
   enabled(): Promise<boolean>;
   writeTag(
     options: WriteTagOptions,
-    writeGuardCallback?: (data: NfcNdefData) => boolean
+    writeGuardCallback?: (data: NfcNdefData) => boolean,
+    readAfterWriteCheckCallback?: (data: NfcNdefData) => boolean
   ): Promise<NfcNdefData>;
   eraseTag(): Promise<void>;
   /**
@@ -183,7 +184,8 @@ export class Nfc implements NfcApi {
 
   writeTag(
     options: WriteTagOptions,
-    writeGuardCallback?: (data: NfcNdefData) => boolean
+    writeGuardCallback?: (data: NfcNdefData) => boolean,
+    readAfterWriteCheckCallback?: (data: NfcNdefData) => boolean
   ): Promise<NfcNdefData> {
     return undefined;
   }
@@ -196,4 +198,13 @@ export class WriteGuardError extends Error {
     this.name = "WriteGuardError";
     this.data = data;
   }
-} 
+}
+
+export class ReadAfterWriteError extends Error {
+  data: NfcNdefData;
+  constructor(message, data: NfcNdefData) {
+    super(message);
+    this.name = "ReadAfterWriteError";
+    this.data = data;
+  }
+}
