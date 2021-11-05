@@ -9,11 +9,11 @@ import {
   WriteTagOptions,
   TextRecord,
   NFCNDEFReaderSessionOptions,
-  WriteGuardError,
-  ReadAfterWriteError
+  WriteGuardBeforeCheckError,
+  WriteGuardAfterCheckError
 } from "./nfc.common";
 
-export { WriteGuardError, ReadAfterWriteError };
+export { WriteGuardBeforeCheckError, WriteGuardAfterCheckError };
 
 export interface NfcSessionInvalidator {
   invalidateSession(): void;
@@ -117,8 +117,8 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
 
   public writeTag(
     options: WriteTagOptions,
-    writeGuardCallback?: (data: NfcNdefData) => boolean,
-    readAfterWriteCheckCallback?: (data: NfcNdefData) => boolean
+    writeGuardBeforeCheckCallback?: (data: NfcNdefData) => boolean,
+    writeGuardAfterCheckCallback?: (data: NfcNdefData) => boolean
   ): Promise<NfcNdefData> {
     return new Promise((resolve, reject) => {
       if (!Nfc._available()) {
@@ -138,24 +138,24 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
             reject(error);
           });
         };
-        const delegateWriteGuardCallback = (data: NfcNdefData) => {
-          if (!writeGuardCallback) {
+        const delegateWriteGuardBeforeCheckCallback = (data: NfcNdefData) => {
+          if (!writeGuardBeforeCheckCallback) {
             return true;
           }
-          return writeGuardCallback(data);
+          return writeGuardBeforeCheckCallback(data);
         };
-        const delegateReadAfterWriteCheckCallback = (data: NfcNdefData) => {
-          if (!readAfterWriteCheckCallback) {
+        const delegateWriteGuardAfterCheckCallback = (data: NfcNdefData) => {
+          if (!writeGuardAfterCheckCallback) {
             return true;
           }
-          return readAfterWriteCheckCallback(data);
+          return writeGuardAfterCheckCallback(data);
         };
         this.writeDelegate = this.createNFCNDEFReaderSessionDelegateWrite(
           options,
           delegateCallback,
           delegateErrorCallback,
-          delegateWriteGuardCallback,
-          delegateReadAfterWriteCheckCallback
+          delegateWriteGuardBeforeCheckCallback,
+          delegateWriteGuardAfterCheckCallback
         );
 
         this.beginNFCNDEFReaderSession(this.writeDelegate, options);
@@ -188,16 +188,16 @@ export class Nfc implements NfcApi, NfcSessionInvalidator {
     options?: WriteTagOptions,
     callback?: (data: any) => void,
     errorCallback?: (data: any) => void,
-    writeGuardCallback?: (data: NfcNdefData) => boolean,
-    readAfterWriteCheckCallback?: (data: NfcNdefData) => boolean
+    writeGuardBeforeCheckCallback?: (data: NfcNdefData) => boolean,
+    writeGuardAfterCheckCallback?: (data: NfcNdefData) => boolean
   ) {
     const delegate =
       NFCNDEFReaderSessionDelegateWriteImpl.createWithOwnerResultCallbackAndOptions(
         new WeakRef(this),
         callback,
         errorCallback,
-        writeGuardCallback,
-        readAfterWriteCheckCallback,
+        writeGuardBeforeCheckCallback,
+        writeGuardAfterCheckCallback,
         options
       );
     return delegate;
@@ -293,10 +293,10 @@ class NFCNDEFReaderSessionDelegateWriteImpl
   private _owner: WeakRef<Nfc>;
   private resultCallback: (message: any) => void;
   private errorCallback: (error: any) => void;
-  private writeGuardCallback: (data: NfcNdefData) => boolean;
-  private readAfterWriteCheckCallback: (data: NfcNdefData) => boolean;
+  private writeGuardBeforeCheckCallback: (data: NfcNdefData) => boolean;
+  private writeGuardAfterCheckCallback: (data: NfcNdefData) => boolean;
+  private writeGuardAfterCheck: boolean;
   private options?: WriteTagOptions;
-  private readAfterWriteCheck: boolean;
 
   public static new(): NFCNDEFReaderSessionDelegateWriteImpl {
     try {
@@ -311,8 +311,8 @@ class NFCNDEFReaderSessionDelegateWriteImpl
     owner: WeakRef<Nfc>,
     callback: (message: any) => void,
     errorCallback: (error: any) => void,
-    writeGuardCallback: (data: NfcNdefData) => boolean,
-    readAfterWriteCheckCallback: (data: NfcNdefData) => boolean,
+    writeGuardBeforeCheckCallback: (data: NfcNdefData) => boolean,
+    writeGuardAfterCheckCallback: (data: NfcNdefData) => boolean,
     options?: WriteTagOptions
   ): NFCNDEFReaderSessionDelegateWriteImpl {
     let delegate = <NFCNDEFReaderSessionDelegateWriteImpl>(
@@ -322,9 +322,9 @@ class NFCNDEFReaderSessionDelegateWriteImpl
     delegate.options = options;
     delegate.resultCallback = callback;
     delegate.errorCallback = errorCallback;
-    delegate.writeGuardCallback = writeGuardCallback;
-    delegate.readAfterWriteCheckCallback = readAfterWriteCheckCallback;
-    delegate.readAfterWriteCheck = false;
+    delegate.writeGuardBeforeCheckCallback = writeGuardBeforeCheckCallback;
+    delegate.writeGuardAfterCheckCallback = writeGuardAfterCheckCallback;
+    delegate.writeGuardAfterCheck = false;
     return delegate;
   }
 
@@ -355,7 +355,7 @@ class NFCNDEFReaderSessionDelegateWriteImpl
         return;
       }
 
-      if (this.readAfterWriteCheck) {
+      if (this.writeGuardAfterCheck) {
         // Read back the data
         prototype.readNDEFWithCompletionHandler.call(
           tag,
@@ -372,7 +372,7 @@ class NFCNDEFReaderSessionDelegateWriteImpl
             const data = NfcHelper.ndefToJson(message);
             console.log("Read After Write Message", JSON.stringify(data));
 
-            if (this.readAfterWriteCheckCallback(data)) {
+            if (this.writeGuardAfterCheckCallback(data)) {
               if (this.options.endMessage) {
                 session.alertMessage = this.options.endMessage;
               }
@@ -380,12 +380,14 @@ class NFCNDEFReaderSessionDelegateWriteImpl
               session.invalidateSession();
               return;
             } else {
-              const errorMessage = this.options.readAfterWriteErrorMessage || "";
+              const errorMessage =
+                this.options.writeGuardAfterCheckErrorMessage || "";
               session.invalidateSessionWithErrorMessage(errorMessage);
-              this.errorCallback(new ReadAfterWriteError(errorMessage, data));
+              this.errorCallback(
+                new WriteGuardAfterCheckError(errorMessage, data)
+              );
               return;
             }
-            
           }
         );
         return;
@@ -429,11 +431,12 @@ class NFCNDEFReaderSessionDelegateWriteImpl
                     }
                     const data = NfcHelper.ndefToJson(message);
                     console.log("First Read Message", JSON.stringify(data));
-                    if (!this.writeGuardCallback(data)) {
-                      const errorMessage = this.options.writeGuardErrorMessage || "";
+                    if (!this.writeGuardBeforeCheckCallback(data)) {
+                      const errorMessage =
+                        this.options.writeGuardBeforeCheckErrorMessage || "";
                       session.invalidateSessionWithErrorMessage(errorMessage);
                       this.errorCallback(
-                        new WriteGuardError(errorMessage, data)
+                        new WriteGuardBeforeCheckError(errorMessage, data)
                       );
                       return;
                     }
@@ -472,11 +475,11 @@ class NFCNDEFReaderSessionDelegateWriteImpl
                                 session.alertMessage =
                                   "Erased data from NFC tag.";
                               } else {
-                                this.readAfterWriteCheck = true;
+                                this.writeGuardAfterCheck = true;
                                 utils.executeOnMainThread(() =>
                                   setTimeout(
                                     () => session.restartPolling(),
-                                    this.options.readAfterWriteDelay
+                                    this.options.writeGuardAfterCheckDelay
                                   )
                                 );
                                 return;
