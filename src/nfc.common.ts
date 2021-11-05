@@ -51,6 +51,7 @@ export interface NFCNDEFReaderSessionOptions {
   endMessage?: string;
   writeGuardBeforeCheckErrorMessage?: string;
   writeGuardAfterCheckErrorMessage?: string;
+  writeGuardAfterCheckMessage?: string;
   writeGuardAfterCheckDelay?: number;
 }
 

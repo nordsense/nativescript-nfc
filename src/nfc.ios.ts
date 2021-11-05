@@ -476,6 +476,10 @@ class NFCNDEFReaderSessionDelegateWriteImpl
                                   "Erased data from NFC tag.";
                               } else {
                                 this.writeGuardAfterCheck = true;
+                                if (this.options.writeGuardAfterCheckMessage) {
+                                  session.alertMessage =
+                                    this.options.writeGuardAfterCheckMessage;
+                                }
                                 utils.executeOnMainThread(() =>
                                   setTimeout(
                                     () => session.restartPolling(),
