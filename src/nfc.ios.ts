@@ -331,35 +331,7 @@ class NFCNDEFReaderSessionDelegateWriteImpl
     const prototype = NFCNDEFTag.prototype;
     const tag = (<NSArray<NFCNDEFTag>>tags).firstObject;
     console.log("Pooling", this.pooling);
-    
-    
-    if (this.pooling) {
-      // Read back the data
-      prototype.readNDEFWithCompletionHandler.call(
-        tag,
-        (message: NFCNDEFMessage, error: NSError) => {
-          console.log("readNDEFWithCompletionHandler");
-          if (error) {
-            console.log(error);
-            session.invalidateSessionWithErrorMessage(
-              "Error reading NDEF message from tag."
-            );
-            this.errorCallback(error);
-            return;
-          }
-          const data = NfcHelper.ndefToJson(message);
-          console.log("Read back message", JSON.stringify(data));
 
-          if (this.options.endMessage) {
-            session.alertMessage = this.options.endMessage;
-          }
-          this.resultCallback(data);
-          session.invalidateSession();
-          return;
-        }
-      );
-      return;
-    }
     //session.restartPolling();
     // utils.executeOnMainThread(() =>
     //   setTimeout(() => session.connectToTagCompletionHandler(tag, (error: NSError) => {
@@ -383,7 +355,33 @@ class NFCNDEFReaderSessionDelegateWriteImpl
       //   tag
       // ).value;
 
-      
+      if (this.pooling) {
+        // Read back the data
+        prototype.readNDEFWithCompletionHandler.call(
+          tag,
+          (message: NFCNDEFMessage, error: NSError) => {
+            console.log("readNDEFWithCompletionHandler");
+            if (error) {
+              console.log(error);
+              session.invalidateSessionWithErrorMessage(
+                "Error reading NDEF message from tag."
+              );
+              this.errorCallback(error);
+              return;
+            }
+            const data = NfcHelper.ndefToJson(message);
+            console.log("Read back message", JSON.stringify(data));
+
+            if (this.options.endMessage) {
+              session.alertMessage = this.options.endMessage;
+            }
+            this.resultCallback(data);
+            session.invalidateSession();
+            return;
+          }
+        );
+        return;
+      }
 
       try {
         prototype.queryNDEFStatusWithCompletionHandler.call(
@@ -447,7 +445,7 @@ class NFCNDEFReaderSessionDelegateWriteImpl
                       prototype.writeNDEFCompletionHandler.call(
                         tag,
                         ndefMessage,
-                        async (error: NSError) => {
+                        (error: NSError) => {
                           console.log("writeNDEFCompletionHandler");
                           if (error) {
                             console.log(error);
