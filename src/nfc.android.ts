@@ -30,15 +30,10 @@ export class NfcIntentHandler {
       application.android.startActivity;
     let intent = activity.getIntent();
     if (intent === null || this.savedIntent === null) {
-      console.log("null intent");
       return;
     }
 
-    console.log("intent", intent);
-    console.log("savedIntent", this.savedIntent);
-
     let action = intent.getAction();
-    console.log("action", action);
     if (action === null) {
       return;
     }
@@ -46,7 +41,6 @@ export class NfcIntentHandler {
     let tag = intent.getParcelableExtra(
       android.nfc.NfcAdapter.EXTRA_TAG
     ) as android.nfc.Tag;
-    console.log("tag", tag);
     if (!tag) {
       return;
     }
@@ -342,7 +336,6 @@ export class Nfc implements NfcApi {
               this.intentFilters,
               this.techLists
             );
-            console.log("Call parseMessage: activityResumedEvent");
             // handle any pending intent
             nfcIntentHandler.parseMessage();
           }
@@ -354,7 +347,6 @@ export class Nfc implements NfcApi {
         application.AndroidApplication.activityNewIntentEvent,
         (args: application.AndroidActivityNewIntentEventData) => {
           nfcIntentHandler.savedIntent = this.intent;
-          console.log("Call parseMessage: activityNewIntentEvent");
           nfcIntentHandler.parseMessage();
         }
       );
@@ -447,7 +439,7 @@ export class Nfc implements NfcApi {
 
         this.setOnNdefDiscoveredListener((data: NfcNdefData) => {
           this.setOnNdefDiscoveredListener(null).then(() => {
-            console.log("First read", JSON.stringify(data));
+            console.log("Read Before Write", JSON.stringify(data));
             if (writeGuardBeforeCheckCallback) {
               if (!writeGuardBeforeCheckCallback(data)) {
                 const errorMessage =
@@ -466,7 +458,7 @@ export class Nfc implements NfcApi {
             }
 
             // Start writing
-            let tag = intent.getParcelableExtra(
+            const tag = intent.getParcelableExtra(
               android.nfc.NfcAdapter.EXTRA_TAG
             ) as android.nfc.Tag;
             if (!tag) {
@@ -474,23 +466,24 @@ export class Nfc implements NfcApi {
               return;
             }
 
-            let records = this.jsonToNdefRecords(options);
+            const records = this.jsonToNdefRecords(options);
 
             // avoiding a TS issue in the generate Android definitions
-            let ndefClass = android.nfc.NdefMessage as any;
-            let ndefMessage = new ndefClass(records);
-
-            let errorMessage = this.writeNdefMessage(ndefMessage, tag);
-            if (errorMessage === null) {
+            const ndefClass = android.nfc.NdefMessage as any;
+            const ndefMessage = new ndefClass(records);
+            console.log("Start writing Ndef message...");
+            const errorMessage = this.writeNdefMessage(ndefMessage, tag);
+            console.log("Ndef message writing completed");
+            if (!errorMessage) {
               let writeGuardAfterCheck = false;
 
               this.setOnNdefDiscoveredListener((data: NfcNdefData) => {
                 if (!writeGuardAfterCheck) {
-                  console.log("writeGuardAfterCheck", writeGuardAfterCheck);
+                  console.log("Skip read, writeGuardAfterCheck is not ready", writeGuardAfterCheck);
                   return;
                 }
                 this.setOnNdefDiscoveredListener(null).then(() => {
-                  console.log("Second read", JSON.stringify(data));
+                  console.log("Read After Write", JSON.stringify(data));
                   if (writeGuardAfterCheckCallback) {
                     if (!writeGuardAfterCheckCallback(data)) {
                       const errorMessage =
@@ -505,58 +498,34 @@ export class Nfc implements NfcApi {
               
               setTimeout(() => {
                 writeGuardAfterCheck = true;
+                console.log("Start writeGuardAfterCheck", writeGuardAfterCheck);
 
-                const newIntent =
-                  application.android.foregroundActivity.getIntent();
-                if (!newIntent) {
-                  console.log("Can't write to tag; didn't receive an intent");
+                const ndef = android.nfc.tech.Ndef.get(tag);
+                try {
+                  ndef.connect();
+                } catch (e) {
+                  console.log("Lost connection, leave it to the listener");
                   return;
                 }
-                console.log("new intent", newIntent);
-
-                tag = newIntent.getParcelableExtra(
-                  android.nfc.NfcAdapter.EXTRA_TAG
-                ) as android.nfc.Tag;
-                if (!tag) {
-                  console.log("Second read no tag");
-                  return;
-                }
-                console.log("Second read tag", tag);
-                // let messages = newIntent.getParcelableArrayExtra(
-                //   android.nfc.NfcAdapter.EXTRA_NDEF_MESSAGES
-                // );
-
-                let ndef = android.nfc.tech.Ndef.get(tag);
-
-                let ndefJson: NfcNdefData = nfcIntentHandler.ndefToJSON(ndef);
-
-                ndef.connect();
-                let message = ndef.getNdefMessage();
+                const message = ndef.getNdefMessage();
+                ndef.close();
+                const ndefJson: NfcNdefData = nfcIntentHandler.ndefToJSON(ndef);
                 ndefJson.message = nfcIntentHandler.messageToJSON(message);
                 ndefJson.type = "NDEF Push Protocol";
 
-                // if (ndef === null && messages !== null) {
-                //   if (messages.length > 0) {
-                //     let message = messages[0] as android.nfc.NdefMessage;
-                //     ndefJson.message = nfcIntentHandler.messageToJSON(message);
-                //     ndefJson.type = "NDEF Push Protocol";
-                //   }
-                //   if (messages.length > 1) {
-                //     console.log(
-                //       "Expected 1 ndefMessage but found " + messages.length
-                //     );
-                //   }
-                // }
                 if (onNdefDiscoveredListener) {
+                  console.log("Calling listener");
                   onNdefDiscoveredListener(ndefJson);
                 }
-              }, 2000);
+              }, options.writeGuardAfterCheckDelay);
             } else {
+              console.log("Write Ndef Message Error", errorMessage);
               reject(errorMessage);
             }
           });
         });
       } catch (ex) {
+        console.log("Write Tag Error", ex);
         reject(ex);
       }
     });
@@ -596,7 +565,6 @@ export class Nfc implements NfcApi {
             this.techLists
           );
           // handle any pending intent
-          console.log("Call parseMessage: initNfcAdapter");
           nfcIntentHandler.parseMessage();
         }
       }
