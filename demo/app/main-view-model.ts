@@ -63,7 +63,7 @@ export class HelloWorldModel extends observable.Observable {
       }
     }, {
       stopAfterFirstRead: true,
-      scanHint: "Scan a tag, baby!"
+      startMessage: "Scan a tag, baby!"
     })
         .then(() => this.set("lastNdefDiscovered", "Listening..."))
         .catch(err => alert(err));
@@ -83,13 +83,28 @@ export class HelloWorldModel extends observable.Observable {
         textRecords: [
           {
             id: [1],
-            text: "Hello!!!!!"
-          }
-        ]
+            text: "This is awesome!",
+          },
+        ],
+        startMessage: "Approach an NFC Tag",
+        endMessage: "Done!",
+        writeGuardBeforeCheckErrorMessage: "Write guard (before) says No!",
+        writeGuardAfterCheckDelay: 5000,
+        writeGuardAfterCheckErrorMessage: "Write guard (after) says No!",
+        writeGuardAfterCheckMessage: "Almost done, please do not remove the tag!"
+      }, (data) => {
+        return true;
+      }, (data) => {
+        return true;
       });
       alert(JSON.stringify(data));
     } catch (e) {
-      alert(e);
+      if (e.name === "WriteGuardBeforeCheckError") {
+        console.log("WriteGuardBeforeCheckError.data", JSON.stringify(e.data));
+      } else if (e.name === "WriteGuardAfterCheckError") {
+        console.log("WriteGuardAfterCheckError.data", JSON.stringify(e.data));
+      }
+      alert(e.message || e);
     }
   }
 

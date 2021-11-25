@@ -8,7 +8,7 @@
 android {  
   defaultConfig {  
     generatedDensities = []
-    applicationId = "org.nativescript.plugindemo.nfc"  
+    applicationId = "com.nordsense.nativescript.plugindemo.nfc"  
   }  
   aaptOptions {  
     additionalParameters "--no-version-vectors"  
