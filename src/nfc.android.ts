@@ -479,7 +479,10 @@ export class Nfc implements NfcApi {
 
               this.setOnNdefDiscoveredListener((data: NfcNdefData) => {
                 if (!writeGuardAfterCheck) {
-                  console.log("Skip read, writeGuardAfterCheck is not ready", writeGuardAfterCheck);
+                  console.log(
+                    "Skip read, writeGuardAfterCheck is not ready",
+                    writeGuardAfterCheck
+                  );
                   return;
                 }
                 this.setOnNdefDiscoveredListener(null).then(() => {
@@ -495,7 +498,7 @@ export class Nfc implements NfcApi {
                   resolve(data);
                 });
               });
-              
+
               setTimeout(() => {
                 writeGuardAfterCheck = true;
                 console.log("Start writeGuardAfterCheck", writeGuardAfterCheck);
@@ -547,7 +550,7 @@ export class Nfc implements NfcApi {
           activity,
           0,
           this.intent,
-          0
+          67108864
         );
 
         // The adapter must be started with the foreground activity.
