@@ -550,7 +550,7 @@ export class Nfc implements NfcApi {
           activity,
           0,
           this.intent,
-          67108864
+          33554432 // Mutable, else we don't get a read
         );
 
         // The adapter must be started with the foreground activity.
